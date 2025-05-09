@@ -1,5 +1,22 @@
-# WordFinder
-WordFinder is a script that uses whisper to transcribe videos and provides a user-friendly interface to get sentences that contain words based on user input, grab them with their respective timestamps, saves and opens a txt file of those timestamps.
+# 🎯 WordFinder
+
+WordFinder is a PyQt6-based application that scans audio files using **Whisper** and extracts specific words or phrases based on user input. It provides a simple drag-and-drop interface and highlights matching words along with timestamps.
+
+---
+
+## 🚀 Features
+
+- **Drag and Drop Interface:**
+  - Easily drop video/audio files to start processing.
+
+- **Keyword Matching:**
+  - Enter words or phrases to be extracted from the audio.
+
+- **Timestamp Formatting:**
+  - Extract and format timestamps for matched words.
+
+- **File Output:**
+  - Save the matched segments to a `.txt` file in the same directory.
 
 # Main Layout
 ![1](https://github.com/AhMadness/WordFinder/assets/48402736/ca045bcb-6f56-445f-b7c5-1d2835ee962d)
