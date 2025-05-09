@@ -77,46 +77,58 @@ class Worker(QThread):
         self.wordsList = wordsList
 
     def run(self):
-        """ Main execution method for the thread. """
         base_name = os.path.basename(self.input_text)
         name, ext = os.path.splitext(base_name)
         out_file = os.path.join(os.path.dirname(self.input_text), f"{name}.txt")
 
-        try:
-            segments = self.process_audio(self.input_text)
-            self.write_file(out_file, segments)
-            self.progress.emit(out_file)
-        except Exception as e:
-            self.progress.emit('Error: ' + str(e))
+        print(f"Writing results to: {out_file}")  # Check file path explicitly
+        print(f"Words to match: {self.wordsList}")  # Check your words explicitly
+
+        segments = self.process_audio(self.input_text)
+
+        if segments:
+            print(f"Segments found: {len(segments)}")  # Confirm segments are found
+        else:
+            print("No segments found matching your words!")
+
+        self.write_file(out_file, segments)
+        self.progress.emit(out_file)
 
     def process_audio(self, file_path):
-        """ Processes audio and extracts segments containing specific words. """
         model = whisper.load_model("base")
-        input = model.transcribe(file_path, language="en", fp16=False, verbose=True)
-        # Setting verbose = True adds the real-time transcript. Setting it to false adds the progress bar.
+        input_data = model.transcribe(file_path, language="en", fp16=False, verbose=False)
+
         segments = []
+        for segment in input_data["segments"]:
+            start_seconds = segment['start']
 
-        for segment in input["segments"]:
-            segment["start"] = format_timestamp(segment['start'])
-            segment["start"] = segment["start"].replace('[', '').replace(']', '').replace('.', '').replace(' --> ', ' - ')
-            segment["start"] = segment["start"][0:5]
+            # Correctly format timestamps
+            timestamp_full = format_timestamp(start_seconds, always_include_hours=True)
+            hours, minutes, seconds_millis = timestamp_full.split(':')
+            seconds = seconds_millis.split('.')[0]
 
-            # Convert the text to lower case for case-insensitive comparison
+            # Build timestamp based on hours
+            if int(hours) > 0:
+                start_time = f"{hours}:{minutes}:{seconds}"
+            else:
+                start_time = f"{minutes}:{seconds}"
+
             segment_text_lower = segment['text'].lower()
 
-            # Check if any word in words list is in segment's text
             if any(word.lower() in segment_text_lower for word in self.wordsList):
-                # Add to list
-                segments.append(f"{segment['start']} - {segment['text']}\n\n")
+                segments.append(f"{start_time} - {segment['text'].strip()}\n\n")
 
         return segments
 
     @staticmethod
     def write_file(file_path, segments):
-        """ Writes segments to a file. """
-        with open(file_path, "w") as output_file:
-            for segment in segments:
-                output_file.write(segment)
+        if not segments:
+            print("No segments to write. File will be empty.")  # crucial debug check
+
+        with open(file_path, "w", encoding="utf-8") as output_file:
+            output_file.writelines(segments)
+
+        print("File writing complete.")
 
 
 class AppDemo(QWidget):
