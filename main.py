@@ -1,7 +1,6 @@
 # Standard library imports
 import os
 import sys
-from datetime import timedelta
 
 # Third party imports
 from PyQt6.QtWidgets import QApplication, QPushButton, QVBoxLayout, QWidget, QLineEdit, QMessageBox, QHBoxLayout, \
@@ -9,24 +8,7 @@ from PyQt6.QtWidgets import QApplication, QPushButton, QVBoxLayout, QWidget, QLi
 from PyQt6.QtGui import QPalette, QColor, QTextOption
 from PyQt6.QtCore import Qt, QTimer, QThread, pyqtSignal
 
-# Local imports
-import whisper
-
-
-# Function definitions
-def format_timestamp(seconds: float, always_include_hours: bool = False, decimal_marker: str = '.'):
-    """ Converts seconds into a string timestamp. """
-    assert seconds >= 0, "Non-negative timestamp expected"
-    time_delta = timedelta(seconds=seconds)
-    total_milliseconds = int(time_delta.total_seconds() * 1000)
-    milliseconds = total_milliseconds % 1000
-
-    hours, remainder = divmod(total_milliseconds, 3600000)
-    minutes, seconds = divmod(remainder, 60000)
-    seconds //= 1000  # Convert milliseconds to seconds
-
-    hours_marker = f"{hours:02d}:" if always_include_hours or hours > 0 else ""
-    return f"{hours_marker}{minutes:02d}:{seconds:02d}{decimal_marker}{milliseconds:03d}"
+from wordfinder_core import find_matching_segments
 
 
 class FileEdit(QLineEdit):
@@ -77,58 +59,28 @@ class Worker(QThread):
         self.wordsList = wordsList
 
     def run(self):
-        base_name = os.path.basename(self.input_text)
-        name, ext = os.path.splitext(base_name)
-        out_file = os.path.join(os.path.dirname(self.input_text), f"{name}.txt")
+        try:
+            base_name = os.path.basename(self.input_text)
+            name, _ = os.path.splitext(base_name)
+            out_file = os.path.join(os.path.dirname(self.input_text), f"{name}.txt")
 
-        print(f"Writing results to: {out_file}")  # Check file path explicitly
-        print(f"Words to match: {self.wordsList}")  # Check your words explicitly
-
-        segments = self.process_audio(self.input_text)
-
-        if segments:
-            print(f"Segments found: {len(segments)}")  # Confirm segments are found
-        else:
-            print("No segments found matching your words!")
-
-        self.write_file(out_file, segments)
-        self.progress.emit(out_file)
+            segments = self.process_audio(self.input_text)
+            self.write_file(out_file, segments)
+            self.progress.emit(out_file)
+        except Exception as exc:
+            self.progress.emit(f"Error: {exc}")
 
     def process_audio(self, file_path):
+        import whisper
+
         model = whisper.load_model("base")
         input_data = model.transcribe(file_path, language="en", fp16=False, verbose=False)
-
-        segments = []
-        for segment in input_data["segments"]:
-            start_seconds = segment['start']
-
-            # Correctly format timestamps
-            timestamp_full = format_timestamp(start_seconds, always_include_hours=True)
-            hours, minutes, seconds_millis = timestamp_full.split(':')
-            seconds = seconds_millis.split('.')[0]
-
-            # Build timestamp based on hours
-            if int(hours) > 0:
-                start_time = f"{hours}:{minutes}:{seconds}"
-            else:
-                start_time = f"{minutes}:{seconds}"
-
-            segment_text_lower = segment['text'].lower()
-
-            if any(word.lower() in segment_text_lower for word in self.wordsList):
-                segments.append(f"{start_time} - {segment['text'].strip()}\n\n")
-
-        return segments
+        return find_matching_segments(input_data["segments"], self.wordsList)
 
     @staticmethod
     def write_file(file_path, segments):
-        if not segments:
-            print("No segments to write. File will be empty.")  # crucial debug check
-
         with open(file_path, "w", encoding="utf-8") as output_file:
             output_file.writelines(segments)
-
-        print("File writing complete.")
 
 
 class AppDemo(QWidget):
@@ -208,6 +160,10 @@ class AppDemo(QWidget):
 
         if not os.path.isfile(input_text):
             QMessageBox.critical(self, "Error", "File not found!")
+            return
+
+        if not self.wordsList:
+            QMessageBox.critical(self, "Error", "Enter at least one word or phrase.")
             return
 
         # Pass the words list to the Worker thread
