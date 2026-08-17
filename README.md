@@ -1,27 +1,56 @@
-# 🎯 WordFinder
+# WordFinder
 
-WordFinder is a PyQt6-based application that scans audio files using **Whisper** and extracts specific words or phrases based on user input. It provides a simple drag-and-drop interface and highlights matching words along with timestamps.
+WordFinder is a compact PyQt6 desktop tool that uses OpenAI Whisper to find
+words or phrases in audio and video. It writes each matching transcript segment
+and its timestamp to a text file beside the source media.
 
----
+## Features
 
-## 🚀 Features
+- Drag-and-drop audio and video input
+- Comma-separated word and phrase matching
+- Local transcription with Whisper's `base` model
+- Timestamped UTF-8 text output
+- Background processing that keeps the interface responsive
 
-- **Drag and Drop Interface:**
-  - Easily drop video/audio files to start processing.
+## Screenshots
 
-- **Keyword Matching:**
-  - Enter words or phrases to be extracted from the audio.
+### Search
 
-- **Timestamp Formatting:**
-  - Extract and format timestamps for matched words.
+![WordFinder search interface](https://github.com/AhMadness/WordFinder/assets/48402736/ca045bcb-6f56-445f-b7c5-1d2835ee962d)
 
-- **File Output:**
-  - Save the matched segments to a `.txt` file in the same directory.
+### Results
 
-# Main Layout
-![1](https://github.com/AhMadness/WordFinder/assets/48402736/ca045bcb-6f56-445f-b7c5-1d2835ee962d)
+![Timestamped WordFinder results](https://github.com/AhMadness/WordFinder/assets/48402736/9fbc6fca-921e-4633-a722-2a4ffd77d576)
 
-# Result
-Note: Search words should be separated with a ", " as seen in the above placeholder.
+## Requirements
 
-![2](https://github.com/AhMadness/WordFinder/assets/48402736/9fbc6fca-921e-4633-a722-2a4ffd77d576)
+- Python 3.10 or newer
+- [FFmpeg](https://ffmpeg.org/download.html) available on `PATH`
+
+Whisper downloads the `base` model the first time WordFinder transcribes a
+file. Transcription runs locally after the model is available.
+
+## Run Locally
+
+```powershell
+git clone https://github.com/AhMadness/WordFinder.git
+cd WordFinder
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install -r requirements.txt
+python main.py
+```
+
+Drop a media file into the window, enter comma-separated search terms, and
+select **Find**. WordFinder creates a `.txt` file beside the media file and
+opens it automatically on Windows.
+
+## Tests
+
+```powershell
+python -m unittest discover -s tests -v
+```
+
+## License
+
+[MIT](LICENSE)
